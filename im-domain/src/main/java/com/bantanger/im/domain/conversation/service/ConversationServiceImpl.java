@@ -16,6 +16,7 @@ import com.bantanger.im.domain.conversation.model.UpdateConversationReq;
 import com.bantanger.im.domain.message.seq.RedisSequence;
 import com.bantanger.im.service.config.AppConfig;
 import com.bantanger.im.service.sendmsg.MessageProducer;
+import com.bantanger.im.service.utils.UserSequenceRepository;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +40,9 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Resource
     AppConfig appConfig;
+
+    @Resource
+    UserSequenceRepository userSequenceRepository;
 
     public String convertConversationId(Integer type, String fromId, String toId) {
         return type + "_" + fromId + "_" + toId;
@@ -74,12 +78,18 @@ public class ConversationServiceImpl implements ConversationService {
             imConversationSetEntity.setReadSequence(messageReadContent.getMessageSequence());
 
             imConversationSetMapper.insert(imConversationSetEntity);
+
+            userSequenceRepository.writeUserSeq(messageReadContent.getAppId(),
+                    messageReadContent.getFromId(), Constants.SeqConstants.ConversationSeq, seq);
         } else {
             long seq = redisSequence.doGetSeq(
                     messageReadContent.getAppId() + ":" + Constants.SeqConstants.ConversationSeq);
             imConversationSetEntity.setSequence(seq);
             imConversationSetEntity.setReadSequence(messageReadContent.getMessageSequence());
             imConversationSetMapper.readMark(imConversationSetEntity);
+
+            userSequenceRepository.writeUserSeq(messageReadContent.getAppId(),
+                    messageReadContent.getFromId(), Constants.SeqConstants.ConversationSeq, seq);
         }
     }
 
@@ -117,6 +127,9 @@ public class ConversationServiceImpl implements ConversationService {
             }
             imConversationSetEntity.setSequence(seq);
             imConversationSetMapper.update(imConversationSetEntity, query);
+
+            userSequenceRepository.writeUserSeq(req.getAppId(),
+                    req.getFromId(), Constants.SeqConstants.ConversationSeq, seq);
 
             UpdateConversationPack pack = new UpdateConversationPack();
             pack.setConversationId(req.getConversationId());

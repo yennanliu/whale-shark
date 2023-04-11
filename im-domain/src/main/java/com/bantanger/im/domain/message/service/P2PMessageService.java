@@ -68,6 +68,7 @@ public class P2PMessageService {
         // 日志打印
         log.info("消息 ID [{}] 开始处理", messageContent.getMessageId());
 
+        // 设置临时缓存，避免消息无限制重发，当缓存失效，直接重新构建新消息进行处理
         MessageContent messageCache = messageStoreImpl.getMessageCacheByMessageId(messageContent.getAppId(), messageContent.getMessageId(), MessageContent.class);
         if (messageCache != null) {
             threadPoolExecutor.execute(() -> {
@@ -95,6 +96,7 @@ public class P2PMessageService {
             messageStoreImpl.storeOfflineMessage(offlineMessage);
             // 线程池执行消息同步，发送，回应等任务流程
             doThreadPoolTask(messageContent);
+            // 缓存消息
             messageStoreImpl.setMessageCacheByMessageId(
                     messageContent.getAppId(), messageContent.getMessageId(), messageContent);
         });
